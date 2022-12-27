@@ -3,19 +3,30 @@ version: "3.8"
 
 services:
   foundry:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.foundry.rule=Host(`foundry.nerdnet.ovh`)"
+      - "traefik.http.routers.foundry.entrypoints=websecure"
+      - "traefik.http.routers.foundry.tls.certresolver=tlschallenge"
+      - "traefik.http.routers.foundry.tls.domains[0].main=foundry.nerdnet.ovh"
+      - "traefik.http.services.foundry.loadbalancer.server.port=30000"
     image: felddy/foundryvtt:release
-    hostname: my_foundry_host
-    init: true
-    restart: "no"
+    #init: true
+    deploy:
+      restart_policy:
+        max_attempts: 5
+        window: 30s
+      resources:
+        limits:
+          cpus: '3.5'
+          memory: '12G'
+          pids: 1024
     volumes:
-      - type: bind
-        source: ./data
+      - type: volume
+        source: data
         target: /data
     environment:
-      - FOUNDRY_PASSWORD=<your_password>
-      - FOUNDRY_USERNAME=<your_username>
-      - FOUNDRY_ADMIN_KEY=atropos
-      # - CONTAINER_CACHE=/data/container_cache
+      - CONTAINER_CACHE=/data/container_cache
       # - CONTAINER_PATCHES=/data/container_patches
       # - CONTAINER_PATCH_URLS=
       #   https://raw.githubusercontent.com/felddy/...
@@ -31,16 +42,16 @@ services:
       #   "resetSeconds": 3600
       #   }
       # - FOUNDRY_GID=foundry
-      # - FOUNDRY_HOSTNAME=
-      # - FOUNDRY_IP_DISCOVERY=
+      - FOUNDRY_HOSTNAME=foundry.nerdnet.ovh
+      - FOUNDRY_IP_DISCOVERY=false
       # - FOUNDRY_LANGUAGE=
       # - FOUNDRY_LOCAL_HOSTNAME=
       # - FOUNDRY_LICENSE_KEY=
-      # - FOUNDRY_MINIFY_STATIC_FILES=
+      - FOUNDRY_MINIFY_STATIC_FILES=true
       # - FOUNDRY_PASSWORD_SALT=
       # - FOUNDRY_PROTOCOL=
       # - FOUNDRY_PROXY_PORT=
-      # - FOUNDRY_PROXY_SSL=false
+      - FOUNDRY_PROXY_SSL=true
       # - FOUNDRY_RELEASE_URL=
       # - FOUNDRY_ROUTE_PREFIX=
       # - FOUNDRY_SSL_CERT=
@@ -51,8 +62,20 @@ services:
       # - FOUNDRY_VERSION=10.291
       # - FOUNDRY_WORLD=
       # - TIMEZONE=US/Eastern
-    ports:
-      - target: 30000
-        published: 30000
-        protocol: tcp
-        mode: host
+    secrets:
+      - source: config_json
+        target: config.json
+    networks:
+      - traefik-servicenet
+
+secrets:
+  config_json:
+    file: "./.secrets/config.json"
+
+volumes:
+  data:
+
+networks:
+  traefik-servicenet:
+    external: true           # this network has to be created once before starting:
+    name: traefik-servicenet # docker network create traefik-servicenet
