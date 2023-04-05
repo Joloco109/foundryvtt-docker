@@ -12,7 +12,7 @@ services:
       - "traefik.http.routers.foundry.middlewares=secHeaders@file"
       - "traefik.http.services.foundry.loadbalancer.server.port=30000"
     image: felddy/foundryvtt:release
-    #init: true
+    # init: true
     deploy:
       restart_policy:
         max_attempts: 5
@@ -21,7 +21,7 @@ services:
         limits:
           cpus: '3.5'
           memory: '12G'
-          pids: x-1024
+          # pids: 1024
     volumes:
       - type: volume
         source: data
@@ -78,5 +78,5 @@ volumes:
 
 networks:
   traefik-servicenet:
-    external: true           # this network has to be created once before starting:
-    name: traefik-servicenet # docker network create traefik-servicenet
+    external: true             # this network has to be created once before starting:
+    name: traefik-servicenet    # docker network create traefik-servicenet
