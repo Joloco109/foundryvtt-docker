@@ -21,7 +21,7 @@ services:
         limits:
           cpus: '3.5'
           memory: '12G'
-          pids: 1024
+          pids: x-1024
     volumes:
       - type: volume
         source: data
