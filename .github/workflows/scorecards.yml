@@ -8,7 +8,7 @@ on:
   schedule:
     - cron: '43 4 * * 4'
   push:
-    branches: ["develop"]
+    branches: ["nerdnet"]
 
 # Declare default permissions as read only.
 permissions: read-all
