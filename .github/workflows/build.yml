@@ -10,7 +10,7 @@ on:
   release:
     types: [edited, published]
   schedule:
-    - cron: '0 10 * * *'  # everyday at 10am
+    - cron: '0 10 * * 6'  # everyday at 10am
   workflow_dispatch:
     inputs:
       dispatch-tag:
@@ -56,27 +56,27 @@ jobs:
           fi
           exit $return_code
 
-#  docker-secrets:
-#    name: "Docker secrets"
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Harden Runner
-#        uses: step-security/harden-runner@128a63446a954579617e875aaab7d2978154e969
-#        with:
-#          egress-policy: block
-#
-#      - name: Check docker.com credentials
-#        run: |
-#          return_code=0
-#          if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
-#            echo "::warning::Set the DOCKER_USERNAME secret."
-#            return_code=1
-#          fi
-#          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
-#            echo "::warning::Set the DOCKER_PASSWORD secret."
-#            return_code=1
-#          fi
-#          exit $return_code
+  docker-secrets:
+    name: "Docker secrets"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@128a63446a954579617e875aaab7d2978154e969
+        with:
+          egress-policy: block
+
+      - name: Check docker.com credentials
+        run: |
+          return_code=0
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "::warning::Set the DOCKER_USERNAME secret."
+            return_code=1
+          fi
+          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "::warning::Set the DOCKER_PASSWORD secret."
+            return_code=1
+          fi
+          exit $return_code
 
   artifact-key:
     name: "Artifact key"
@@ -218,35 +218,35 @@ jobs:
     with:
       image_artifact_name: ${{ needs.config.outputs.image_archive_artifact_name }}
 
-#  build-multi-arch-image:
-#    name: "Publish image"
-#    needs:
-#      - build-each-platform
-#      - config
-#      - docker-secrets
-#      - metadata
-#    if: github.event_name != 'pull_request'
-#    permissions:
-#      packages: write
-#    uses: felddy/reusable-workflows/.github/workflows/docker-multi-arch-push.yml@develop
-#    with:
-#      artifact_name: ${{ needs.config.outputs.image_archive_artifact_name }}
-#      image_tags: ${{ needs.metadata.outputs.image_tags }}
-#    secrets:
-#      docker_password: ${{ secrets.DOCKER_PASSWORD }}
-#      docker_username: ${{ secrets.DOCKER_USERNAME }}
-#
-#  publish-readme:
-#    name: "Publish docs"
-#    needs:
-#      - build-multi-arch-image
-#      - config
-#      - docker-secrets
-#      - metadata
-#    if: needs.metadata.outputs.latest == 'true'
-#    uses: felddy/reusable-workflows/.github/workflows/docker-publish-description.yml@develop
-#    with:
-#      image_name: ${{ needs.config.outputs.image_name }}
-#    secrets:
-#      docker_password: ${{ secrets.DOCKER_PASSWORD }}
-#      docker_username: ${{ secrets.DOCKER_USERNAME }}
+  build-multi-arch-image:
+    name: "Publish image"
+    needs:
+      - build-each-platform
+      - config
+      - docker-secrets
+      - metadata
+    if: github.event_name != 'pull_request'
+    permissions:
+      packages: write
+    uses: felddy/reusable-workflows/.github/workflows/docker-multi-arch-push.yml@develop
+    with:
+      artifact_name: ${{ needs.config.outputs.image_archive_artifact_name }}
+      image_tags: ${{ needs.metadata.outputs.image_tags }}
+    secrets:
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
+
+  publish-readme:
+    name: "Publish docs"
+    needs:
+      - build-multi-arch-image
+      - config
+      - docker-secrets
+      - metadata
+    if: needs.metadata.outputs.latest == 'true'
+    uses: felddy/reusable-workflows/.github/workflows/docker-publish-description.yml@develop
+    with:
+      image_name: ${{ needs.config.outputs.image_name }}
+    secrets:
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      docker_username: ${{ secrets.DOCKER_USERNAME }}
