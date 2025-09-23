@@ -13,9 +13,12 @@ from .utils import RedactedPrinter
 
 MAIN_SERVICE_NAME = "foundry"
 REDACTION_REGEXES = [
+    # AWS S3 pre-signed URL
     re.compile(r"AWSAccessKeyId=(.*?)&Signature=(.*?)&"),
+    # Cloudflare R2 pre-signed URL
+    re.compile(r"\?verify=([0-9]+-[a-zA-Z0-9%]+)"),
 ]
-VERSION_FILE = "src/_version.py"
+VERSION_FILE = "src/version.txt"
 VERSION_SERVICE_NAME = f"{MAIN_SERVICE_NAME}-version"
 
 client = docker.from_env()
@@ -49,14 +52,13 @@ def main_container(image_tag):
             "CONTAINER_URL_FETCH_RETRY": 5,
             "CONTAINER_VERBOSE": True,
             "FOUNDRY_ADMIN_KEY": os.environ.get("FOUNDRY_ADMIN_KEY", "atropos"),
-            "FOUNDRY_GID": os.environ.get("FOUNDRY_GID", "foundry"),
             "FOUNDRY_PASSWORD": os.environ.get("FOUNDRY_PASSWORD"),
-            "FOUNDRY_UID": os.environ.get("FOUNDRY_UID", "foundry"),
             "FOUNDRY_USERNAME": os.environ.get("FOUNDRY_USERNAME"),
-            "TIMEZONE": "UTC",
+            "TZ": "UTC",
         },
         name=MAIN_SERVICE_NAME,
         ports={"30000/tcp": None},
+        user=f"{os.getuid()}:{os.getgid()}",
         volumes={str(Path.cwd() / Path("data")): {"bind": "/data", "driver": "local"}},
     )
     yield container
@@ -79,10 +81,9 @@ def version_container(image_tag):
 @pytest.fixture(scope="session")
 def project_version():
     """Get the project version."""
-    pkg_vars = {}
     with open(VERSION_FILE) as f:
-        exec(f.read(), pkg_vars)  # nosec
-    return pkg_vars["__version__"]
+        version = f.read().strip()
+    return version
 
 
 @pytest.fixture(scope="session")

@@ -1,15 +1,7 @@
-#!/bin/sh
-# shellcheck disable=SC3001,SC3010,SC3021,SC3046,SC3051
-# SC3001 - busybox supports process substitution
-# SC3010 - busybox supports [[ ]]
-# SC3021 - busybox supports >&
-# SC3046 - busybox supports source command
-# SC3051 - busybox supports source command
+#!/bin/bash
 
 set -o nounset
 set -o errexit
-# shellcheck disable=SC3040
-# pipefail is supported by busybox
 set -o pipefail
 
 CONFIG_DIR="/data/Config"
@@ -47,21 +39,15 @@ else
   fi
 fi
 
-if [ "$1" = "--shell" ]; then
-  log_warn "Starting a shell as requested by argument --shell"
-  /bin/sh
-  exit $?
-fi
-
 if [[ "${FOUNDRY_IP_DISCOVERY:-}" == "false" ]]; then
   log "FOUNDRY_IP_DISCOVERY is set to false: Disabling IP discovery."
   # Add argument to disable IP discovery
   set -- "$@" --noipdiscovery
 fi
 
-# Space seperated list of regex rules which environment variables must meet to
+# Space separated list of regex rules which environment variables must meet to
 # be carried over to the new environment, which Node/Foundry will be running in.
-ENV_VAR_PASSLIST_REGEX='^HOME$ ^NODE_.+$'
+ENV_VAR_PASSLIST_REGEX='^HOME$ ^NODE_.+$ ^TZ$'
 # Build list of environment variables to carry over into a clean environment
 ENV_VAR_CARRY_LIST=''
 # shellcheck disable=SC3045
@@ -75,8 +61,8 @@ while IFS='=' read -rd '' ENV_VAR_NAME ENV_VAR_VALUE; do
   done
 done < <(env -0)
 
-# Spawn node with clean environment to prevent credential leaks
+# Exec node with clean environment to prevent credential leaks
 log "Starting Foundry Virtual Tabletop."
 # We want ENV_VAR_CARRY_LIST to word split
 # shellcheck disable=SC2086
-env -i $ENV_VAR_CARRY_LIST node "$@" || log_error "Node process exited with code $?"
+exec env -i $ENV_VAR_CARRY_LIST /usr/local/bin/node "$@" || log_error "Exec failed with code $?"

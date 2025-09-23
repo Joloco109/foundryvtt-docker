@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const doc = `
-Generate a Foundry Virtual Tabletop pre-signed release URL using cookies from
+Generate a Foundry Virtual Tabletop presigned release URL using cookies from
 authenticate.js.
 
 The utility will print the release URL to standard out.
@@ -28,7 +28,7 @@ Options:
 
 // Imports
 import { CookieJar } from "tough-cookie";
-import { FileCookieStore } from "tough-cookie-file-store";
+import FileCookieStore from "tough-cookie-file-store";
 import createLogger from "./logging.js";
 import docopt from "docopt";
 import fetchCookie from "fetch-cookie";
@@ -54,6 +54,14 @@ const HEADERS: Headers = new Headers({
 const INITIAL_RETRY_DELAY_S = 120; // 2 minutes
 
 /**
+ * ReleaseResponse - JSON response from the release URL endpoint.
+ */
+interface ReleaseResponse {
+  url: string;
+  lifetime: number;
+}
+
+/**
  * sleepWithProgress - Exponential sleep back off based on attempt number.
  * Logs a messages during sleep to indicate progress.
  * @param  {number} attempt Attempt number.
@@ -77,7 +85,7 @@ async function sleepWithProgress(attempt: number): Promise<void> {
 }
 
 /**
- * fetchReleaseURL - Fetch the pre-signed S3 URL.
+ * fetchReleaseURL - Fetch the presigned URL.
  *
  * @param  {string} build Build to download.
  * @param  {number} retries Number of retries to attempt.
@@ -87,9 +95,9 @@ async function fetchReleaseURL(
   build: string,
   retries: number,
 ): Promise<string | null> {
-  logger.info(`Fetching S3 pre-signed release URL for build ${build}...`);
-  const release_url: string = `${BASE_URL}/releases/download?build=${build}&platform=linux`;
-  for (var attempt = 1; attempt <= 1 + retries; attempt++) {
+  logger.info(`Fetching presigned release URL for build ${build}...`);
+  const release_url: string = `${BASE_URL}/releases/download?build=${build}&platform=node&response_type=json`;
+  for (let attempt = 1; attempt <= 1 + retries; attempt++) {
     // If this is not the first attempt, wait a bit before trying again.
     if (attempt > 1) {
       await sleepWithProgress(attempt);
@@ -99,20 +107,20 @@ async function fetchReleaseURL(
     const response: Response = await fetch(release_url, {
       method: "GET",
       headers: HEADERS,
-      redirect: "manual",
     });
-    // Expect a redirect status
-    if (!(response.status >= 300 && response.status < 400)) {
+    // Check for a successful 200 response
+    if (response.status !== 200) {
       logger.warn(
         `Unexpected response ${response.status}: ${response.statusText}`,
       );
       continue;
     }
 
-    const s3_url: string | null = response.headers.get("location");
-    logger.debug(`S3 presigned URL: ${s3_url}`);
+    const jsonData = (await response.json()) as ReleaseResponse;
+    const presigned_url: string | null = jsonData.url;
+    logger.debug(`Presigned URL: ${presigned_url}`);
 
-    return s3_url;
+    return presigned_url;
   }
   throw new Error(`Failed to fetch release URL.`);
 }
@@ -154,7 +162,7 @@ async function main(): Promise<number> {
     );
   }
 
-  // Generate an S3 pre-signed URL and print it to stdout.
+  // Generate a presigned URL and print it to stdout.
   const releaseURL: string | null = await fetchReleaseURL(
     foundry_build,
     retries,

@@ -1,6 +1,4 @@
-#!/bin/sh
-# shellcheck disable=SC3010
-# SC3010 - busybox supports [[ ]]
+#!/bin/bash
 
 if [[ "${FOUNDRY_SSL_CERT:-}" && "${FOUNDRY_SSL_KEY:-}" ]]; then
   protocol="https"
@@ -14,6 +12,6 @@ else
   STATUS_URL="${protocol}://localhost:30000/api/status"
 fi
 
-/usr/bin/curl --cookie-jar healthcheck-cookiejar.txt \
-  --cookie healthcheck-cookiejar.txt --insecure --fail --silent \
+/usr/bin/curl --cookie-jar /tmp/healthcheck-cookiejar.txt \
+  --cookie /tmp/healthcheck-cookiejar.txt --insecure --fail --silent \
   "${STATUS_URL}" || exit 1
