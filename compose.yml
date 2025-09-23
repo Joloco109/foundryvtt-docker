@@ -10,12 +10,12 @@ services:
       - "traefik.http.routers.foundry.middlewares=secHeaders@file"
       - "traefik.http.services.foundry.loadbalancer.server.port=30000"
     hostname: "foundry"
-    restart: unless-stopped
-    image: felddy/foundryvtt:release
+    restart: always
+    image: felddy/foundryvtt:13.348.0
     # init: true
     deploy:
       restart_policy:
-        max_attempts: 5
+        #max_attempts: 5
         window: 30s
       resources:
         limits:
